@@ -1,16 +1,33 @@
-# React + Vite
+## 6 UI States Implemented
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+In this project, we added 6 essential UI states to improve user experience and handle edge cases:
 
-Currently, two official plugins are available:
+### 1. Loading State (Skeleton Screen)
+* **What it does:** Shows 5 pulsing grey placeholder cards while data is loading.
+* **Why:** Stops the screen from flickering or jumping when switching tabs.
+* **File:** `src/components/QueueList.jsx`
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### 2. Empty State
+* **What it does:** Displays an "All caught up" message with a checkmark icon when no contracts are found.
+* **Action:** Has a "Clear Search" / "View All Open" button to reset filters.
+* **File:** `src/components/EmptyState.jsx`
 
-## React Compiler
+### 3. Error State
+* **What it does:** Shows an error message if the queue fails to load: *"We couldn't load the queue. Your decisions are saved."*
+* **Action:** Includes a blue "Try again" button to retry loading.
+* **File:** `src/components/ErrorState.jsx`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 4. Success State (Undo Toast)
+* **What it does:** Shows a dark popup notification at the bottom right when a contract is approved, rejected, or blocked.
+* **Action:** Includes an "Undo" button with a 6-second timer to cancel the action.
+* **File:** `src/components/UndoToast.jsx`
 
-## Expanding the ESLint configuration
+### 5. Large Data State (Pagination)
+* **What it does:** Splits the long contract list into 6 items per page.
+* **Controls:** Adds "Previous" and "Next" buttons at the bottom of the list.
+* **File:** `src/components/QueueList.jsx`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 6. Permission State (Role-Based Restriction)
+* **What it does:** Disables the "Approve" button for contracts valued over ₹75 Lakh.
+* **Message:** Displays: *"Only senior reviewers can approve contracts above ₹75 lakh."*
+* **File:** `src/components/DetailPanel.jsx`
