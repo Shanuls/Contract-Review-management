@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { INITIAL_CONTRACTS } from './data/contracts';
 import TopNavbar from './components/TopNavbar';
@@ -32,6 +30,12 @@ export default function App() {
   const [viewMode, setViewMode] = useState('split');
   const [grayscale, setGrayscale] = useState(false);
 
+  // Loading State for Skeletons
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Error State with Safe Retry
+  const [hasError, setHasError] = useState(false);
+
   // Modals state
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -43,6 +47,33 @@ export default function App() {
   // 6-second Undo state
   const [undoSnapshot, setUndoSnapshot] = useState(null);
   const searchInputRef = useRef(null);
+
+  // Initial load simulation for skeleton animation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Tab switch with smooth skeleton transition
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setIsLoading(true);
+    setHasError(false);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 400);
+  };
+
+  // Retry Handler for Error State Recovery
+  const handleRetryFetch = () => {
+    setHasError(false);
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+  };
 
   // Sort function: Overdue first (most overdue top), then priority HIGH -> MED -> LOW, then due date
   const sortContracts = (list) => {
@@ -308,7 +339,7 @@ export default function App() {
         return { 
           ...c, 
           lineItems: updatedItems, 
-          value: newValue,
+          value: newValue, 
           audit: [auditEntry, ...c.audit]
         };
       }
@@ -426,7 +457,7 @@ export default function App() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         tabCounts={tabCounts}
         viewMode={viewMode}
         setViewMode={setViewMode}
@@ -446,7 +477,12 @@ export default function App() {
               onSelectContract={(c) => setSelectedId(c.id)}
               searchQuery={searchQuery}
               onClearSearch={() => setSearchQuery('')}
-              setActiveTab={setActiveTab}
+              activeTab={activeTab}
+              setActiveTab={handleTabChange}
+              tabCounts={tabCounts}
+              isLoading={isLoading}
+              hasError={hasError}
+              onRetry={handleRetryFetch}
             />
             <DetailPanel
               contract={selectedContract}
@@ -465,6 +501,7 @@ export default function App() {
           <TableView
             contracts={filteredContracts}
             selectedContract={selectedContract}
+            isLoading={isLoading}
             onSelectContract={(c) => {
               setSelectedId(c.id);
               setViewMode('split');

@@ -1,9 +1,4 @@
-.detail-container {
-  flex: 1;
-  background-color: #f8fafc;
-  overflow-y: auto;
-  padding: 24px 32px;
-}
+
 
 .detail-card {
   background-color: #ffffff;
@@ -11,15 +6,11 @@
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
+  
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.detail-header-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
+
 
 .detail-title-group {
   display: flex;
@@ -52,6 +43,7 @@
 
 .detail-actions-cluster {
   display: flex;
+  
   align-items: center;
   gap: 8px;
 }
@@ -94,7 +86,7 @@
 
 .btn-block {
   background-color: #ffffff;
-  color: #d97706;
+  color: #683904;
   border: 1px solid #fde68a;
   font-weight: 700;
   font-size: 12px;
@@ -213,3 +205,25 @@
   margin-top: 5px;
   flex-shrink: 0;
 }
+/* 1. Detail header card-ai top-la sticky aakki z-index set panrom */
+.detail-header-card {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background-color: #ffffff; /* Scroll pannum bodhu keezhe irukkura content pinnala maraiya white background */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); /* Light shadow so scroll panradhu neat-aa theriyum */
+}
+
+
+.detail-container {
+  flex: 1;
+  background-color: #f8fafc;
+  overflow-y: auto;
+  padding: 24px 32px;
+  position: relative;
+}
+

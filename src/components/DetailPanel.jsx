@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Play, Check, X, ShieldAlert, RotateCcw, AlertCircle, Clock, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Check, X, ShieldAlert, RotateCcw, AlertCircle, Clock, ShieldCheck, Lock } from 'lucide-react';
 import './DetailPanel.css';
 
 export default function DetailPanel({
@@ -18,6 +17,49 @@ export default function DetailPanel({
       </main>
     );
   }
+
+  // Permission Check: Contracts exceeding ₹75 Lakh require Senior Reviewer role
+  const isRestricted = (contract?.value || 0) > 7500000;
+
+  // Local draft state for batch editing line items
+  const [draftLineItems, setDraftLineItems] = useState(contract.lineItems || []);
+
+  useEffect(() => {
+    setDraftLineItems(contract.lineItems || []);
+  }, [contract.id, contract.lineItems]);
+
+  const isModified = JSON.stringify(draftLineItems) !== JSON.stringify(contract.lineItems);
+
+  // Input typing-la empty string allow panrom, so leading '0' varaadhu
+  const handleDraftQtyChange = (itemId, val) => {
+    const parsedVal = val === '' ? '' : parseInt(val, 10);
+    setDraftLineItems((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, qty: parsedVal } : item))
+    );
+  };
+
+  // Blur aagum pothu empty-aa irundha default 1 aagidum
+  const handleBlurCheck = (itemId, currentVal) => {
+    if (currentVal === '' || currentVal <= 0) {
+      handleDraftQtyChange(itemId, 1);
+    }
+  };
+
+  // Save click pannina mattum audit trail update aagum
+  const handleSaveAll = () => {
+    draftLineItems.forEach((draftItem) => {
+      const original = contract.lineItems?.find((li) => li.id === draftItem.id);
+      const safeQty = draftItem.qty === '' || draftItem.qty <= 0 ? 1 : draftItem.qty;
+      if (original && original.qty !== safeQty) {
+        onUpdateLineItemQty(contract.id, draftItem.id, safeQty);
+      }
+    });
+  };
+
+  // Cancel click panna draft revert aagidum
+  const handleCancelAll = () => {
+    setDraftLineItems(contract.lineItems || []);
+  };
 
   const formatINR = (val) => `₹${Number(val).toLocaleString('en-IN')}`;
   const formatLakhs = (val) => {
@@ -39,7 +81,7 @@ export default function DetailPanel({
 
   return (
     <main className="detail-container">
-      {/* Header Info & Action */}
+      {/* Header Info & Sticky Action Buttons */}
       <div className="detail-card detail-header-card">
         <div>
           <div className="detail-title-group">
@@ -47,40 +89,75 @@ export default function DetailPanel({
             <span style={{ color: '#94a3b8' }}>•</span>
             <h2 className="detail-main-title">{contract.title}</h2>
           </div>
-          <div className="detail-meta-line">{contract.supplier} • {contract.category}</div>
+          <div className="detail-meta-line">
+            {contract.supplier} • {contract.category}
+          </div>
         </div>
 
-        <div className="detail-actions-cluster">
-          {contract.status === 'New' && (
-            <button onClick={() => onStartReview(contract.id)} className="btn-approve">
-              <Play size={14} /> Start review
-            </button>
-          )}
-
-          {contract.status === 'In Review' && (
-            <>
-              <button onClick={() => onTriggerApprove(contract)} className="btn-approve">
-                <Check size={14} /> Approve (A)
+        <div className="detail-actions-cluster" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {contract.status === 'New' && (
+              <button onClick={() => onStartReview(contract.id)} className="btn-approve">
+                <Play size={14} /> Start review
               </button>
-              <button onClick={() => onOpenReasonModal('Reject')} className="btn-reject">
-                <X size={14} /> Reject (R)
-              </button>
-              <button onClick={() => onOpenReasonModal('Block')} className="btn-block">
-                <ShieldAlert size={14} /> Block (B)
-              </button>
-            </>
-          )}
+            )}
 
-          {contract.status === 'Blocked' && (
-            <button onClick={() => onResumeReview(contract.id)} className="btn-approve" style={{ backgroundColor: '#d97706' }}>
-              <RotateCcw size={14} /> Resume review
-            </button>
-          )}
+            {contract.status === 'In Review' && (
+              <>
+                <button
+                  onClick={() => !isRestricted && onTriggerApprove(contract)}
+                  disabled={isRestricted}
+                  className="btn-approve"
+                  title={isRestricted ? 'Senior reviewer role required' : ''}
+                  style={{
+                    opacity: isRestricted ? 0.55 : 1,
+                    cursor: isRestricted ? 'not-allowed' : 'pointer',
+                    backgroundColor: isRestricted ? '#94a3b8' : undefined
+                  }}
+                >
+                  {isRestricted ? <Lock size={14} /> : <Check size={14} />} Approve (A)
+                </button>
+                <button onClick={() => onOpenReasonModal('Reject')} className="btn-reject">
+                  <X size={14} /> Reject (R)
+                </button>
+                <button onClick={() => onOpenReasonModal('Block')} className="btn-block">
+                  <ShieldAlert size={14} /> Block (B)
+                </button>
+              </>
+            )}
 
-          {(contract.status === 'Approved' || contract.status === 'Rejected') && (
-            <span style={{ fontWeight: 700, fontSize: '12px', color: contract.status === 'Approved' ? '#059669' : '#dc2626' }}>
-              Contract {contract.status}
-            </span>
+            {contract.status === 'Blocked' && (
+              <button onClick={() => onResumeReview(contract.id)} className="btn-approve" style={{ backgroundColor: '#d97706' }}>
+                <RotateCcw size={14} /> Resume review
+              </button>
+            )}
+
+            {(contract.status === 'Approved' || contract.status === 'Rejected') && (
+              <span style={{ fontWeight: 700, fontSize: '12px', color: contract.status === 'Approved' ? '#059669' : '#dc2626' }}>
+                Contract {contract.status}
+              </span>
+            )}
+          </div>
+
+          {/* Permission State Notice: Shows only if contract value > ₹75 Lakh and is in review */}
+          {isRestricted && contract.status === 'In Review' && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                backgroundColor: '#fffbeb',
+                border: '1px solid #fef3c7',
+                color: '#b45309',
+                fontSize: '11px',
+                fontWeight: 600
+              }}
+            >
+              <Lock size={12} />
+              <span>Only senior reviewers can approve contracts above ₹75 lakh.</span>
+            </div>
           )}
         </div>
       </div>
@@ -136,12 +213,50 @@ export default function DetailPanel({
         </div>
       </div>
 
-      {/* Line items with editable QTY */}
+      {/* Line items with Batch Save & Cancel */}
       <div className="detail-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
           <strong style={{ fontSize: '12px', textTransform: 'uppercase', color: '#475569' }}>Line Items & Deliverables</strong>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>Editable Quantity recalculates total</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', color: '#94a3b8' }}>Editable Quantity recalculates total</span>
+            {isModified && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={handleSaveAll}
+                  style={{
+                    backgroundColor: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '3px 10px',
+                    borderRadius: '5px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelAll}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    color: '#64748b',
+                    border: '1px solid #cbd5e1',
+                    padding: '3px 8px',
+                    borderRadius: '5px',
+                    fontSize: '11px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
         <table className="data-table">
           <thead>
             <tr>
@@ -152,7 +267,7 @@ export default function DetailPanel({
             </tr>
           </thead>
           <tbody>
-            {contract.lineItems?.map((li) => (
+            {draftLineItems.map((li) => (
               <tr key={li.id}>
                 <td style={{ fontWeight: 600 }}>{li.desc}</td>
                 <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{formatINR(li.unitRate)}</td>
@@ -161,12 +276,13 @@ export default function DetailPanel({
                     type="number"
                     min="1"
                     value={li.qty}
-                    onChange={(e) => onUpdateLineItemQty(contract.id, li.id, parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleDraftQtyChange(li.id, e.target.value)}
+                    onBlur={() => handleBlurCheck(li.id, li.qty)}
                     className="qty-input"
                   />
                 </td>
                 <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {formatINR(li.unitRate * li.qty)}
+                  {formatINR(li.unitRate * (li.qty || 0))}
                 </td>
               </tr>
             ))}
@@ -192,15 +308,14 @@ export default function DetailPanel({
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                   <strong style={{ color: '#0f172a', fontSize: '12px' }}>{aud.action}</strong>
-                  {/* Exact Date & Time badge */}
                   <span style={{ 
                     color: '#475569', 
                     fontSize: '11px', 
                     fontFamily: 'monospace', 
                     backgroundColor: '#f1f5f9', 
                     padding: '2px 8px', 
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px', 
+                    border: '1px solid #e2e8f0', 
                     fontWeight: 600
                   }}>
                     🕒 {aud.timestamp}
